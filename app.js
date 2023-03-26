@@ -1,3 +1,7 @@
+//initializing some variables to later be used
+cronica = false;
+boomAtucha = false;
+
 //EventEmitter for a pub/sub structure for events
 class EventEmitter {
     // a constructor is necessary to initialize the store for events and callbacks
@@ -11,10 +15,10 @@ class EventEmitter {
         if (!this.listeners[message]) {
             this.listeners[message] = []
         }
-        //then, if the property does exist, it just adds a listener
+        //if the property does exist, it just adds a listener
         this.listeners[message].push(listener);
     }
-    //the emit method takes two arguments, no exceptions, the event's name, in this case "message" and a parameter, which must
+    //the emit method takes two arguments, no exceptions, the event's name, in this case "message", and a parameter, which must
     //be passed to a listener
     emit(message, payload = null) {
         if(this.listeners[message]) {
@@ -24,6 +28,8 @@ class EventEmitter {
     }
 }
 
+
+//main class, later used by other classes as a parent
 class GameObject {
     constructor(x, y) {
       this.x = x;
@@ -49,6 +55,7 @@ class GameObject {
     }
   }
 
+//classes that inherit from GameObject
 class Cat extends GameObject {
   constructor(x, y) {
     super(x, y);
@@ -76,7 +83,7 @@ class Edesur extends GameObject {
     }
 }
 
-//creates the cat var so it can be used as an object
+//creates the cat var and eventEmitter variables so they can be used to emit events
 let cat,
     eventEmitter = new EventEmitter();
 
@@ -94,7 +101,8 @@ const Messages = {
     GAME_END_EDESUR: "GAME_END_EDESUR",
 };
 
-//eventlistener that listens for key presses, especially for arrow keys 
+//eventlistener method from the DOM API that listens for key presses, in this case for arrow keys and emits a message
+//according to what key was pressed
 window.addEventListener("keydown", (evt) => {
     if (evt.key === "ArrowLeft") {
       eventEmitter.emit(Messages.KEY_EVENT_LEFT);
@@ -107,6 +115,8 @@ window.addEventListener("keydown", (evt) => {
     }
   });
 
+
+//function that creates Cat (& others) object, passing as parameters the x,y coordinates for the object to be placed and also the img source
 function createCat() {
     cat = new Cat(
       512,
@@ -116,6 +126,7 @@ function createCat() {
     gameObjects.push(cat);
   }
 
+//same as above
 function createAtucha() {
     atucha = new Atucha(
       200,
@@ -125,6 +136,7 @@ function createAtucha() {
     gameObjects.push(atucha);
 }
 
+//same as above
 function createEdesur() {
     edesur = new Edesur(
       700,
@@ -134,7 +146,7 @@ function createEdesur() {
     gameObjects.push(edesur);
 }
 
-//returns a fully loaded sound with the path passed as a str parameter
+//function that returns a fully loaded sound, it takes the path passed as a str parameter to look for the sound
 function createSound(path) {
     sound = new Audio();
     sound.src = path;
@@ -152,15 +164,19 @@ function loadAsset(path) {
     });
 };
 
-
+//this draws objects in the canvas, every item in the gameObjects array is drawn, so they must have all the required parameters set beforehand to be drawn
 function drawGameObjects(ctx) {
     gameObjects.forEach((go) => go.draw(ctx));
 }
 
+//this "checks" for intersecting rectangles, returns true if any of the corners of an object intersect with other
 function intersectRect(r1, r2) {
 	return !(r2.left > r1.right || r2.right < r1.left || r2.top > r1.bottom || r2.bottom < r1.top);
 }
 
+//creates an atuchaBody to later create an if for events if it happens to collide with the catBody, same for edesur, but without the variable created
+//kind of a mess, the edesur should also have a const created like atuchaBody
+//it works anyway lol
 function updateGameObjects() {
 
   const atuchaBody = gameObjects.filter((go) => go.type === 'Atucha');
@@ -174,11 +190,12 @@ function updateGameObjects() {
       apagonSound.play()
       eventEmitter.emit(Messages.EDESUR_DOWN);
     }
-  }
-  )
+  })
 
 }
 
+//initGame function, its called when the window is loaded and creates the array for the gameObjects, and the objects to be used and drawn
+//also responds to the keyboard inputs for the catBody to move, and listens for some main events
 function initGame() {
     gameObjects = [];
     createCat();
@@ -199,7 +216,7 @@ function initGame() {
 
   eventEmitter.on(Messages.EDESUR_DOWN, () => {
     displayMessage(
-      "fuiste a hacer un reclado a edesur, no te respondió nadie"
+      "fuiste a hacer un reclamo a edesur, no te respondió nadie"
     )
   });
 
@@ -213,20 +230,16 @@ function initGame() {
 
 }
 
-boomAtucha = false;
-
-function isCatDead() {
-  return cat.dead <= true;
-}
-
+//displays messages in the middle of the screen in black or whichever color desired
 function displayMessage(message, color = "black") {
-  ctx.font = "30px Arial";
+  ctx.font = "36px Arial";
   ctx.fillStyle = color;
   ctx.textAlign = "center";
   ctx.fillText(message, canvas.width / 2, canvas.height / 2);
 }
 
-function endGame() {
+//endGame function, when called, stops the previous sounds and shows a message
+function endGame(atucha) {
   if (atucha) {
     displayMessage(
       "explotó el atucha a la mierda"
@@ -234,8 +247,6 @@ function endGame() {
     apagonSound.pause();
   }
 }
-
-cronica = false;
 
 //this defines the behaviour of everything once the page loads
 window.onload = async () => {
